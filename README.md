@@ -1,2 +1,2 @@
 # techno_ks
-Taechno Klientseadmed praktikumide skriptid ja  muud failid
+Tachno Klientseadmed - praktikumide skriptid ja  muud failid
