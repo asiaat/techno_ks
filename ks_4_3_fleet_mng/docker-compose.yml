@@ -1,0 +1,63 @@
+services:
+  # 1. ja 2. masin: Ubuntu serverid (pordid 2201 ja 2202)
+  node1-ubuntu:
+    image: ubuntu:24.04
+    hostname: node1-ubuntu
+    ports:
+      - "2201:22"
+      - "8081:80"
+    command: >
+      sh -c "apt-get update && apt-get install -y openssh-server python3 sudo &&
+      mkdir -p /run/sshd && echo 'root:salasona' | chpasswd &&
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+      /usr/sbin/sshd -D"
+
+  node2-ubuntu:
+    image: ubuntu:24.04
+    hostname: node2-ubuntu
+    ports:
+      - "2202:22"
+      - "8082:80"
+    command: >
+      sh -c "apt-get update && apt-get install -y openssh-server python3 sudo &&
+      mkdir -p /run/sshd && echo 'root:salasona' | chpasswd &&
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+      /usr/sbin/sshd -D"
+
+  # 3. ja 4. masin: Debian 12 (Raspberry Pi OS-i ja Veebikioski simulaatorid, pordid 2203 ja 2204)
+  node3-debian:
+    image: debian:bookworm
+    hostname: node3-debian
+    ports:
+      - "2203:22"
+      - "8083:80"
+    command: >
+      sh -c "apt-get update && apt-get install -y openssh-server python3 sudo &&
+      mkdir -p /run/sshd && echo 'root:salasona' | chpasswd &&
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+      /usr/sbin/sshd -D"
+
+  node4-rpi-sim:
+    image: debian:bookworm
+    hostname: node4-rpi-sim
+    ports:
+      - "2204:22"
+      - "8084:80"
+    command: >
+      sh -c "apt-get update && apt-get install -y openssh-server python3 sudo &&
+      mkdir -p /run/sshd && echo 'root:salasona' | chpasswd &&
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+      /usr/sbin/sshd -D"
+
+  # 5. masin: Alpine Linux (Kergkaaluline IoT sõlm, port 2205)
+  node5-alpine:
+    image: alpine:latest
+    hostname: node5-alpine
+    ports:
+      - "2205:22"
+      - "8085:80"
+    command: >
+      sh -c "apk update && apk add openssh python3 sudo &&
+      ssh-keygen -A && echo 'root:salasona' | chpasswd &&
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+      /usr/sbin/sshd -D"
