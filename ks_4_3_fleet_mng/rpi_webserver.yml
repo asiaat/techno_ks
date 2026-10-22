@@ -1,0 +1,59 @@
+---
+- name: Raspberry Pi veebiserver ja SSH turvamine
+  hosts: rpi_and_debian
+  become: true
+
+  tasks:
+    - name: 1. Paigalda Nginx veebiserver
+      apt:
+        name: nginx
+        state: present
+
+    - name: 2. Tagada, et Nginx teenus töötab ja käivitub alglaadimisel
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: 3. Genereeri dünaamiline HTML leht Raspberry Pi andmetega
+      copy:
+        dest: /var/www/html/index.html
+        mode: '0644'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Raspberry Pi Staatus</title>
+            <style>
+              body { font-family: Arial, sans-serif; background-color: #1e1e2f; color: #ffffff; text-align: center; padding: 50px; }
+              .card { background: #2a2a40; padding: 20px; border-radius: 10px; display: inline-block; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+              h1 { color: #e91e63; }
+            </style>
+          </head>
+          <body>
+            <h1>🍓 Raspberry Pi Kaughalduse Armatuurlaud</h1>
+            <div class="card">
+              <p><b>Masina nimi (Hostname):</b> {{ ansible_hostname }}</p>
+              <p><b>Operatsioonisüsteem:</b> {{ ansible_distribution }} {{ ansible_distribution_version }}</p>
+              <p><b>Kerneli versioon:</b> {{ ansible_kernel }}</p>
+              <p><b>Arhitektuur:</b> {{ ansible_architecture }}</p>
+              <p><b>IP-aadress:</b> {{ ansible_default_ipv4.address | default('127.0.0.1') }}</p>
+              <p><b>Muutmälu (RAM) kokku:</b> {{ ansible_memtotal_mb }} MB</p>
+              <p><b>Staatus:</b> Seadistatud automaatselt Ansible'iga!</p>
+            </div>
+          </body>
+          </html>
+
+    - name: 4. Turva SSH - keela root sisselogimine (Zero Trust)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: Taaskäivita SSH
+
+  handlers:
+    - name: Taaskäivita SSH
+      service:
+        name: ssh
+        state: restarted

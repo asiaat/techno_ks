@@ -1,0 +1,98 @@
+---
+- name: Suuremahuline kaughaldus - 5 masinat ja 3 erinevat OS-i
+  hosts: fleet
+  become: true
+
+  tasks:
+    # 1. OS-SPETSIIFILINE PAKETIHALDUS (when tingimuslaused)
+    - name: Uuenda apt vahemälu (ainult Debian, Ubuntu ja Raspberry Pi OS)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Uuenda apk vahemälu (ainult Alpine Linux)
+      apk:
+        update_cache: yes
+      when: ansible_os_family == "Alpine"
+
+    # 2. UNIVERSAALNE PAKETTIDE PAIGALDUS
+    - name: Paigalda haldustööriistad ja Nginx veebiserver kõigile 5 masinale
+      package:
+        name:
+          - htop
+          - curl
+          - git
+          - nginx
+        state: present
+
+    # 3. KIOSKI JA RASPBERRY PI SPETSIIFILINE SEADISTUS (Moodulist KS 4.0)
+    - name: Loo Chromiumi URL Whitelist poliitika kaust (ainult Debian / RPi grupis)
+      file:
+        path: /etc/chromium/policies/managed
+        state: directory
+        mode: '0755'
+      when: "'rpi_and_debian' in group_names"
+
+    - name: Rakenda Kioski URL Whitelist poliitika (ainult Debian / RPi grupis)
+      copy:
+        dest: /etc/chromium/policies/managed/kiosk_policy.json
+        mode: '0644'
+        content: |
+          {
+            "URLBlocklist": ["*"],
+            "URLAllowlist": ["https://techno.ee", "http://localhost*"]
+          }
+      when: "'rpi_and_debian' in group_names"
+
+    # 4. DÜNAAMILINE VEEBI-ARMATUURLAUD KÕIGILE 5 MASINALE (Moodulist KS 4.2)
+    - name: Loo Nginx veebikaust ja konfiguratsioon (Alpine Linuxi eripära)
+      file:
+        path: /var/www/html
+        state: directory
+        mode: '0755'
+
+    - name: Seadista Alpine Nginx näitama /var/www/html kausta
+      copy:
+        dest: /etc/nginx/http.d/default.conf
+        content: |
+          server {
+              listen 80 default_server;
+              root /var/www/html;
+              index index.html;
+          }
+      when: ansible_os_family == "Alpine"
+
+    - name: Genereeri igale masinale tema OS-i ja riistvara andmetega veebileht
+      copy:
+        dest: /var/www/html/index.html
+        mode: '0644'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Sõlme Staatus: {{ ansible_hostname }}</title>
+            <style>
+              body { font-family: Arial, sans-serif; background-color: #121212; color: #e0e0e0; text-align: center; padding: 40px; }
+              .card { background: #1e1e2e; padding: 25px; border-radius: 12px; display: inline-block; text-align: left; border-left: 6px solid #00e676; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+              h1 { color: #00e676; }
+              .badge { background: #ff4081; color: white; padding: 4px 10px; border-radius: 5px; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <h1>🌐 Ansible Fleet Management Armatuurlaud</h1>
+            <div class="card">
+              <p><b>Masina nimi (Hostname):</b> <span class="badge">{{ ansible_hostname }}</span></p>
+              <p><b>Operatsioonisüsteem:</b> {{ ansible_distribution }} {{ ansible_distribution_version }} (Pere: {{ ansible_os_family }})</p>
+              <p><b>Ansible'i grupp:</b> {{ group_names | join(', ') }}</p>
+              <p><b>Kernel:</b> {{ ansible_kernel }}</p>
+              <p><b>Arhitektuur:</b> {{ ansible_architecture }}</p>
+              <p><b>Muutmälu (RAM):</b> {{ ansible_memtotal_mb }} MB</p>
+              <p><b>Staatus:</b> Hallatud tsentraalselt läbi Ansible Playbooki!</p>
+            </div>
+          </body>
+          </html>
+
+    - name: Käivita Nginx veebiserver kõigis 5 masinas
+      shell: nginx || nginx -s reload
+      changed_when: false

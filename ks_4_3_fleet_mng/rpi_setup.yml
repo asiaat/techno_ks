@@ -1,0 +1,30 @@
+---
+- name: Raspberry Pi baasseadistus ja tööriistade paigaldus
+  hosts: rpi_and_debian
+  become: true
+
+  tasks:
+    - name: Uuenda apt pakettide nimekirja (apt update)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Paigalda vajalikud haldus- ja diagnostikatööriistad
+      apt:
+        name:
+          - htop
+          - git
+          - curl
+          - neofetch
+        state: present
+
+    - name: Loo Raspberry Pi sisselogimise tervitusteade (MOTD)
+      copy:
+        content: |
+          ====================================================
+          Tere tulemast! Seda Raspberry Pi-d hallatakse
+          tsentraalselt Ansible'iga (IaC).
+          Ära tee käsitsi muudatusi!
+          ====================================================
+        dest: /etc/motd
+        mode: '0644'
